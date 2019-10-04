@@ -1,0 +1,17 @@
+{
+  "name": "remote-compute",
+  "version": "1.0.0",
+  "description": "transaction processor for remote-compute",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cbor": "^5.0.1",
+    "crypto": "^1.0.1",
+    "sawtooth-sdk": "^1.0.5"
+  }
+}
