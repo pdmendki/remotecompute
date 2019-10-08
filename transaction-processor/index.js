@@ -1,7 +1,7 @@
 'use strict'
 
 const { TransactionProcessor } = require('sawtooth-sdk/processor')
-const IntegerKeyHandler = require('./handler')
+const RCHandler = require('./handler')
 
 if (process.argv.length < 3) {
   console.log('missing a validator address')
@@ -12,6 +12,6 @@ const address = process.argv[2]
 
 const transactionProcessor = new TransactionProcessor(address)
 
-transactionProcessor.addHandler(new IntegerKeyHandler())
+transactionProcessor.addHandler(new RCHandler())
 
 transactionProcessor.start()
