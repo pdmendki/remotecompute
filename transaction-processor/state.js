@@ -1,8 +1,9 @@
 'use strict'
 
 const crypto = require('crypto')
+const {RCPayload, TXAction, JobData, JobStatus} = require('../common/payload')
 
-class Job{
+/*class Job{
   constructor(id, state=null, owner=null, solver=null, cmd){
     this.id = id
     this.state = state
@@ -12,7 +13,7 @@ class Job{
     this.inputs = null
     this.results = null
   }
-}
+}*/
 
 const _hash = (x) =>
   crypto.createHash('sha512').update(x).digest('hex').toLowerCase().substring(0, 64)
@@ -62,6 +63,5 @@ class JobState {
 module.exports = {
   RC_NAMESPACE,
   RC_FAMILY,
-  Job,
   JobState
 }
