@@ -25,7 +25,12 @@ class RCHandler extends TransactionHandler {
       this.processPayload(transactionData, ctx).then( (data) => console.log('updated data', data),
         (err) => console.log('Error updating', err)
       )
+      /*var entries = {}
+      entries['9a6181f5f8e790f1cf0d8edfbef092febfe5e9ef9eb51b69760a27e013445d0b4a8272'] = Buffer.from("test")
+      return ctx.setState(entries, 5000).then(res => console.log('done', res)).catch( err => console.log('err', err))
+      */
     })
+    .catch( x => console.log('Error ', err))
   }
 
 /*  this.decodeData = (data) => {
@@ -69,20 +74,22 @@ class RCHandler extends TransactionHandler {
         job.owner = transaction.signer
         job.inputs=transaction.data.inputs
         let jobState = new JobState(context)
-        if( null != jobState.getJob(job.id)){
-          let reason =  new InvalidTransaction("Job with this ID already exist")
-          reject(reason)
-        } 
-        else{
-          console.log('Creating a new job state')
-          try{
-            jobState.updateJob(job).then(data => resolve(data), data => reject(data)) //TODO : fix this
-          }
-          catch (err){
-            let reason = new InvalidTransaction("Error saving job state")
+        jobState.getJob(job.id)
+	.catch()
+	.then( x => {
+	  if(x && x.length > 0) {
+            let reason =  new InvalidTransaction("Job with this ID already exist")
             reject(reason)
           }
-        }
+          else{
+            console.log('Creating a new job state')
+            jobState.updateJob(job).then( (data) => { 
+              console.log('post update', data) 
+	      resolve(data)
+              })
+         //     .catch(err){reject(err)} //TODO : fix this
+          }
+        })
       }
       else if( action === 'register'){
       }

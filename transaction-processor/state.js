@@ -2,6 +2,7 @@
 
 const crypto = require('crypto')
 const {RCPayload, TXAction, JobData, JobStatus} = require('../common/payload')
+const cbor = require('cbor')
 
 /*class Job{
   constructor(id, state=null, owner=null, solver=null, cmd){
@@ -33,19 +34,25 @@ class JobState {
 
   updateJob(job) {
     let addr = _makeRcAddress(job.id)
-    let data = cbos.encode(JSON.stringify(job))
-    let entries = { [addr] : data }
+    let data = cbor.encode(JSON.stringify(job))
+    let entries = { [addr] : data}
     return this.ctx.setState(entries, _timeout)
   }
 
   getJob(id) {
     let addr = _makeRcAddress(id)
-    this.ctx.getState([addr], _timeout).then((jobvals) => {
-      if(jobvals[addr]){
+    return this.ctx.getState([addr], _timeout)
+		  /*.then((jobvals) => 
+	   /* {
+      console.log('reading states', jobvals)
+      if(jobvals && jobvals[addr] && jobvals[addr].length > 0){
+	console.log('read this =', jobvals[addr])
         let obj = JSON.parse(cbor.decodeFirstSync(jobvals[addr]))
+	console.log('job obj = ', obj)
         return obj
       }
-    })
+    }
+    )*/
   }
   
   checkForStateUpdates(job) {
