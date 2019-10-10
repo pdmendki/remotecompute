@@ -9,6 +9,11 @@ const cbor = require('cbor')
 const uuidv1 = require('uuid/v1')
 const {Secp256k1PrivateKey, Secp256k1PublicKey} = require('sawtooth-sdk/signing/secp256k1.js')
 
+const _hash = (x) =>
+  createHash('sha512').update(x).digest('hex').toLowerCase()
+const RC_FAMILY = "remotecompute"
+const RC_NAMESPACE = _hash(RC_FAMILY).substring(0, 6)
+
 class Config {
   constructor(){
     const defaultConfig = config.development;
@@ -42,10 +47,10 @@ class PayloadProcessor {
     const payloadBytes = cbor.encode(this.payload)
     console.log(this.payload)
     const transactionHeaderBytes = protobuf.TransactionHeader.encode({
-          familyName: 'remotecompute',
+          familyName: RC_FAMILY,
           familyVersion: '1.0',
-          inputs: [],
-          outputs: [],
+          inputs: [RC_NAMESPACE],
+          outputs: [RC_NAMESPACE],
           signerPublicKey: this.gConfig.public_key,
           batcherPublicKey: this.gConfig.public_key,
           dependencies: [],
