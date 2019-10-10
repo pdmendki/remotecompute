@@ -1,6 +1,6 @@
 'use strict'
 const {RCPayload, TXAction, JobData, JobStatus} = require('../common/payload')
-const {RC_NAMESPACE, RC_FAMILY, JobState} = require('./state')
+const {RC_NAMESPACE, RC_FAMILY, JobState, _makeRcAddress} = require('./state')
 
 const { TransactionHandler } = require('sawtooth-sdk/processor/handler')
 const { InvalidTransaction } = require('sawtooth-sdk/processor/exceptions')
@@ -17,20 +17,59 @@ class RCHandler extends TransactionHandler {
   }
 
 
-  apply( tprequest, ctx) {
+  apply( tprequest, context) {
     console.log("inside apply !!")
-    return this.unpackTransaction(tprequest)
-    .then((transactionData) => {
-      console.log("txn data", transactionData)
-      this.processPayload(transactionData, ctx).then( (data) => console.log('updated data', data),
-        (err) => console.log('Error updating', err)
-      )
+      let header = tprequest.header
+      let signer = header.signerPublicKey
+      console.log('signer public key = ', signer)
+      let payload = cbor.decodeFirstSync(tprequest.payload)
+      let transaction = ({data: payload,
+                         signer: signer})
+
+      console.log("txn data", transaction)
+      let action = transaction.data.action
+      let actionPromise = null
+      if (action === 'create') {
+        let job = new JobData(transaction.data.id, JobStatus.CREATED, transaction.data.type)
+        job.owner = transaction.signer
+        job.inputs=transaction.data.inputs
+        let address = _makeRcAddress(job.id)
+        return context.getState([address])
+        .then( (possibleAddressValues) => {
+          if( possibleAddressValues && possibleAddressValues.length){
+            console.log("Job Id already present")
+            throw(  new InvalidTransaction("Job with this ID already exist"))
+          } 
+          else {
+            let entries = { [address] : cbor.encode(JSON.stringify(job))
+            }
+            return context.setState(entries)
+          }
+        })
+	      .catch( err => {
+          console.log('Error in creating job', err)
+        })
+      }
+      else if( action === 'register'){
+      }
+      else if( action === 'lock' ){
+      }
+      else if( action === 'submit'){
+      }
+      else if( action === 'accept'){
+      }
+    /* 
+      return actionPromise.then( addresses => {
+        if(addresses.length === 0) {
+          throw new InternalError("States are not updated !")
+        } else {
+	  console.log("updated states", addresses)
+	}
+      })
       /*var entries = {}
       entries['9a6181f5f8e790f1cf0d8edfbef092febfe5e9ef9eb51b69760a27e013445d0b4a8272'] = Buffer.from("test")
       return ctx.setState(entries, 5000).then(res => console.log('done', res)).catch( err => console.log('err', err))
       */
-    })
-    .catch( x => console.log('Error ', err))
   }
 
 /*  this.decodeData = (data) => {
@@ -75,19 +114,16 @@ class RCHandler extends TransactionHandler {
         job.inputs=transaction.data.inputs
         let jobState = new JobState(context)
         jobState.getJob(job.id)
-	.catch()
-	.then( x => {
-	  if(x && x.length > 0) {
+	        .catch()
+	        .then( x => {
+	        if(x && x.length > 0) {
             let reason =  new InvalidTransaction("Job with this ID already exist")
             reject(reason)
           }
           else{
             console.log('Creating a new job state')
-            jobState.updateJob(job).then( (data) => { 
-              console.log('post update', data) 
-	      resolve(data)
-              })
-         //     .catch(err){reject(err)} //TODO : fix this
+            let prom = jobState.updateJob(job)
+	          resolve(prom)
           }
         })
       }

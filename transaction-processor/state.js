@@ -34,8 +34,9 @@ class JobState {
 
   updateJob(job) {
     let addr = _makeRcAddress(job.id)
-    let data = cbor.encode(JSON.stringify(job))
+    let data = cbor.encode(JSON.stringify("favafsadfsadf"))
     let entries = { [addr] : data}
+    console.log('setting states', entries)
     return this.ctx.setState(entries, _timeout)
   }
 
@@ -70,5 +71,6 @@ class JobState {
 module.exports = {
   RC_NAMESPACE,
   RC_FAMILY,
-  JobState
+  JobState,
+  _makeRcAddress
 }
