@@ -8,10 +8,12 @@ const {protobuf} = require('sawtooth-sdk')
 const cbor = require('cbor')
 const uuidv1 = require('uuid/v1')
 const {Secp256k1PrivateKey, Secp256k1PublicKey} = require('sawtooth-sdk/signing/secp256k1.js')
+const {RC_FAMILY} = require('../common/state')
+
+console.log('family = ', RC_FAMILY)
 
 const _hash = (x) =>
   createHash('sha512').update(x).digest('hex').toLowerCase()
-const RC_FAMILY = "remotecompute"
 const RC_NAMESPACE = _hash(RC_FAMILY).substring(0, 6)
 
 class Config {
