@@ -1,0 +1,34 @@
+{
+    "development": {
+        "config_id": "development",
+        "app_name": "requestor",
+        "node_port": 3000,
+        "public_key":"02bbf99b13c622231eb9fe70f29bb7c8bf9ec7fcf2187807f2862097e49bf60315",
+        "private_key":"4776450630d10d8288d3243f8f17fbfdb0a0640921026fe5b171358c76361bb3",
+        "validator_url": "tcp://192.168.56.101:4004",
+        "validator_rest_url":"http://192.168.56.101:8008/"
+    },
+    "testing": {
+        "config_id": "testing",
+        "public_key":"02bbf99b13c622231eb9fe70f29bb7c8bf9ec7fcf2187807f2862097e49bf60315",
+        "private_key":"4776450630d10d8288d3243f8f17fbfdb0a0640921026fe5b171358c76361bb3",
+        "validator_url": "tcp://192.168.56.101:4004",
+        "validator_rest_url":"http://localhost:8008/"
+    },
+    "staging": {
+        "config_id": "staging",
+        "node_port": 8080,
+        "public_key":"02f1d75019a594b6d784368bb885e0dbad42301e2b013604ac3aa537ac0173aa6c",
+        "private_key":"8f548813977b0ed489c82a7a563d730417eef046a76a40c475ba8d8220a9c076",
+        "validator_url": "tcp://192.168.56.101:4004",
+        "validator_rest_url":"http://localhost:8008/"
+    },
+    "production": {
+        "config_id": "production",
+        "node_port": 8080,
+        "public_key":"02218e49ec909db3e5b22e6e71456bcda355bb65aab04a98ffac9e0d995439c466",
+        "private_key":"b50cd76b02b16f72c254407c1e7fe1d0ce1f7ae353837e76badc274261003444",
+        "validator_url": "tcp://192.168.56.101:4004",
+        "validator_rest_url":"http://localhost:8008/"
+    }
+}
