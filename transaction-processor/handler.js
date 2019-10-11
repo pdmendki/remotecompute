@@ -1,6 +1,6 @@
 'use strict'
 const {RCPayload, TXAction, JobData, JobStatus} = require('../common/payload')
-const {RC_NAMESPACE, RC_FAMILY, JobState, _makeRcAddress} = require('./state')
+const {RC_NAMESPACE, RC_FAMILY, JobState, _makeRcAddress} = require('../common/state')
 
 const { TransactionHandler } = require('sawtooth-sdk/processor/handler')
 const { InvalidTransaction } = require('sawtooth-sdk/processor/exceptions')
