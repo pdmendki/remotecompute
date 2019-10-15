@@ -8,8 +8,21 @@ const environment = process.env.NODE_ENV || 'development';
 const environmentConfig = config[environment];
 const finalConfig = _.merge(defaultConfig, environmentConfig);
 const cbor = require('cbor')
-
+const tmp = require('tmp')
+const path = require('path')
+const fs = require('fs')
+const { PayloadProcessor} = require('../requestor/requestor.js')
+const {RCPayload, TXAction, JobData, JobRegistrationData, JobStatus} = require('../common/payload')
+const {RC_FAMILY} = require('../common/state')
+const {createHash} = require('crypto')
 const { Stream } = require('sawtooth-sdk/messaging/stream')
+const compose = require('docker-compose')
+const child_process =  require('child_process')
+
+const INPUTFILE_NAME = 'input'
+const RESULTSFILE_NAME = 'output'
+const DOCKER_COMPOSE_FILENAME = 'docker-compose.yaml'
+
 const {
   Message,
   EventList,
@@ -22,10 +35,8 @@ const {
 
 global.gConfig = finalConfig;
 
-console.log(`global.gConfig: ${JSON.stringify(global.gConfig, undefined, global.gConfig.json_indentation)}`);
+//console.log(`global.gConfig: ${JSON.stringify(global.gConfig, undefined, global.gConfig.json_indentation)}`);
 
-const {RC_FAMILY} = require('../common/state')
-const {createHash} = require('crypto')
 const _hash = (x) =>
   createHash('sha512').update(x).digest('hex').toLowerCase()
 const RC_NAMESPACE = _hash(RC_FAMILY).substring(0, 6)
@@ -66,12 +77,66 @@ const handleEvent = msg => {
   if (msg.messageType === Message.MessageType.CLIENT_EVENTS) {
     const events = EventList.decode(msg.content).events
     //deltas.handle(getBlock(events), getChanges(events))
-    console.log('Block data = ', getBlock(events))
+    console.log('Received notificatio for Block data = ', getBlock(events))
     let stateChanges = getChanges(events)
     for (var i in stateChanges) {
       let change = stateChanges[i]
-      console.log ('Address = ', change.address)
-      console.log ('change data = ', cbor.decodeFirstSync(change.value))
+      console.log ('Received notification for state change at this address = ', change.address)
+      let changeDataStr = cbor.decodeFirstSync(change.value)
+      //console.log('state change = ', changeDataStr)
+      
+      //Check if the job type is created
+      if( changeDataStr.indexOf(JobStatus.CREATED) > -1) {
+        //console.log ('new job created= ', cbor.decodeFirstSync(change.value))
+        let job = JSON.parse(changeDataStr) 
+        console.log('Received notification for the job = ', job.id)
+        if( global.gConfig.job_types_to_solve.includes( job.type)){
+          let payload = new RCPayload(job.id, TXAction.LOCK, job.type)
+          const processor = new PayloadProcessor(payload, global.gConfig)
+          //console.log('payload = ',payload)
+          console.log('Aquiring lock')
+          processor.process()
+        }
+      }
+      else if( changeDataStr.indexOf(JobStatus.LOCKED) > -1) {
+        let job = JSON.parse(changeDataStr) 
+        console.log ('job locked successfully = ', job.id)
+        if( global.gConfig.job_types_to_solve.includes( job.type)){
+          console.log('solving job type ', job.type)  
+          let tmpdir = tmp.dirSync()
+          console.log('Job files are fetched in ', tmpdir)
+          //console.log('inputs = ', job.inputs)
+          let parsedInputs = Buffer.from(job.inputs,'base64')
+          //console.log('parsed in', parsedInputs)
+          //input files
+          let inputPath = path.join(tmpdir.name, INPUTFILE_NAME)
+          let inputFileData = parsedInputs//cbor.decodeFirstSync(parsedInputs)
+          fs.writeFileSync(inputPath, inputFileData)
+          //docker-compose file
+          let dockerFilePath = path.join(tmpdir.name, DOCKER_COMPOSE_FILENAME)
+          fs.writeFileSync(dockerFilePath, Buffer.from(job.dockerfiledata,'base64'))
+          //output file
+          //let resultsFile = path.join(tmpdir, RESULTSFILE_NAME)
+          /*
+          compose.down().then( () => {
+            compose.upAll({ cwd: tmpdir.name, log: true})
+            .then(
+              () => { console.log('Job execution is done');compose.down()}
+              //err => { console.log('something went wrong:', err.message);compose.down()}
+            ); 
+            //tmpdir.removeCallback()
+          })
+          .catch( err => {console.log('error = ', err)})
+          */
+          child_process.execFileSync("docker-compose", ["up" ], {cwd : tmpdir.name ,stdio: 'inherit'})
+          child_process.execFileSync("docker-compose", ["down" ], {cwd : tmpdir.name, stdio: 'inherit'})
+          console.log('Job output is at location ', path.join(tmpdir.name, RESULTSFILE_NAME))
+        }
+        else{
+          console.log('skipping job type ', job.type)
+        }
+        //console.log('job = ', job)
+      }
     }  
     //console.log('StateDelta data = ', getChanges(events))
   } else {
@@ -101,7 +166,7 @@ const subscribe = () => {
   )
     .then(response => ClientEventsSubscribeResponse.decode(response))
     .then(decoded => {
-      console.log('Subscription response !')
+      console.log('Subscription is successful!')
       const status = _.findKey(ClientEventsSubscribeResponse.Status,
                                val => val === decoded.status)
       if (status !== 'OK') {
