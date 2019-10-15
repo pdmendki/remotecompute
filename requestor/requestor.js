@@ -35,7 +35,7 @@ class PayloadProcessor {
   constructor(payload, gConfig) {
     this.payload = payload
     this.gConfig = gConfig
-    console.log('config = ', this.gConfig)
+    //console.log('config = ', this.gConfig)
 
     const context = createContext('secp256k1')
     const privateKey = Secp256k1PrivateKey.fromHex(this.gConfig.private_key)
