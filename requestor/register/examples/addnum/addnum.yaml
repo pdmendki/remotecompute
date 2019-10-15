@@ -1,0 +1,11 @@
+version: "2.1"
+
+services:
+
+  addnum:
+    image: pdmendki/addnum:latest
+    container_name: addnumcontainer
+    command: bash -c "/bin/add `< /app/input` > /app/output"
+    volumes:
+      - .:/app
+

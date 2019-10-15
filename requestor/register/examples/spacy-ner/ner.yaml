@@ -1,0 +1,11 @@
+version: "2.1"
+
+services:
+
+  ner:
+    image: pdmendki/spacy-ner:latest
+    container_name: spacyner
+    command: bash -c "cd /app; cp /app/input /ner/input; python /code/ner.py > /app/output"
+    volumes:
+      - .:/app
+
