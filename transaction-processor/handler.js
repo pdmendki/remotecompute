@@ -1,5 +1,5 @@
 'use strict'
-const {RCPayload, TXAction, JobData, JobStatus} = require('../common/payload')
+const {RCPayload, TXAction, JobData, JobRegistrationData, JobStatus} = require('../common/payload')
 const {RC_NAMESPACE, RC_FAMILY, JobState, _makeRcAddress} = require('../common/state')
 
 const { TransactionHandler } = require('sawtooth-sdk/processor/handler')
@@ -8,6 +8,7 @@ const {protobuf} = require('sawtooth-sdk')
 const TransactionHeader = protobuf.TransactionHeader
 const cbor = require('cbor')
 const {createHash} = require('crypto')
+const { PayloadProcessor} = require('../requestor/requestor.js')
 
 
 class RCHandler extends TransactionHandler {
@@ -16,6 +17,17 @@ class RCHandler extends TransactionHandler {
     console.log("constructed !")
   }
 
+ /* getJobFromId(jobId) {
+    let address = _makeRcAddress(jobId)
+    return context.getState([address])
+    .then( (possibleAddressValues) => {
+      if( possibleAddressValues && possibleAddressValues.length){
+      }
+    }
+  }
+ */ 
+  updateJobStatus( jobId, newStatus){
+  }
 
   apply( tprequest, context) {
     console.log("inside apply !!")
@@ -33,7 +45,11 @@ class RCHandler extends TransactionHandler {
         let job = new JobData(transaction.data.id, JobStatus.CREATED, transaction.data.type)
         job.owner = transaction.signer
         job.inputs=transaction.data.inputs
+        job.bid=transaction.data.bid
         let address = _makeRcAddress(job.id)
+        if (job.inputs === null) {
+          throw (new InvalidTransaction("Job inputs cant be null"))
+        } 
         return context.getState([address])
         .then( (possibleAddressValues) => {
           if( possibleAddressValues && possibleAddressValues.length){
@@ -41,7 +57,50 @@ class RCHandler extends TransactionHandler {
             throw(  new InvalidTransaction("Job with this ID already exist"))
           } 
           else {
-            let entries = { [address] : cbor.encode(JSON.stringify(job))
+            let typeAddress = _makeRcAddress(job.type)
+            return context.getState([typeAddress])
+            .then( (jobRegistrationData) => {
+              if (jobRegistrationData === null || jobRegistrationData.length === 0){
+                throw ( new InvalidTransaction("Job type is not registered"))
+              }
+              else {
+                let jobRegistration = JSON.parse(cbor.decodeFirstSync(jobRegistrationData[typeAddress]))
+                console.log('job registration data', jobRegistration)
+                job.dockerfiledata=jobRegistration.dockerfiledata
+                job.dockerfilename=jobRegistration.dockerfilename
+                job.command=jobRegistration.command
+                console.log('modified job = ', job)
+                console.log('stringified job -', JSON.stringify(job))
+                let encodedJob = cbor.encode(JSON.stringify(job))
+                console.log('job address = ', address)
+                let entries = { [address] : encodedJob
+                }
+                return context.setState(entries)
+              }
+            })
+          }//if( possibleAddressValues && possibleAddressValues.length)
+        })
+	      .catch( err => {
+          console.log('Error in creating job', err)
+        })
+      }
+      else if( action === 'register'){
+        //let jobRegistrationData = JSON.parse(transaction.data)
+        let jobRegistrationData = new JobRegistrationData(action, transaction.data.type, transaction.data.dockerfiledata, transaction.data.dockerfilename, transaction.data.command)
+        console.log('job registration data = ', jobRegistrationData)
+
+        if(jobRegistrationData.type === null || jobRegistrationData.dockerfiledata === null || jobRegistrationData.command === null){
+          throw (new InvalidTransaction("Invalid input for job registration"))
+        }
+        let address = _makeRcAddress(jobRegistrationData.type)
+        return context.getState([address])
+        .then( (possibleAddressValues) => {
+          if( possibleAddressValues && possibleAddressValues.length){
+            console.log("Job type is already registered")
+            throw(  new InvalidTransaction("Job with type is already registered"))
+          } 
+          else {
+            let entries = { [address] : cbor.encode(JSON.stringify(jobRegistrationData))
             }
             return context.setState(entries)
           }
@@ -50,9 +109,29 @@ class RCHandler extends TransactionHandler {
           console.log('Error in creating job', err)
         })
       }
-      else if( action === 'register'){
-      }
       else if( action === 'lock' ){
+        let address = _makeRcAddress(transaction.data.id)
+        console.log('address to lock', address)
+        return context.getState([address])
+        .then( (possibleAddressValues) => {
+          console.log('getState = ', possibleAddressValues)
+          if( possibleAddressValues && possibleAddressValues[address]){
+            console.log("Job Id already present")
+            let job = JSON.parse(cbor.decodeFirstSync(possibleAddressValues[address]))
+            if (job.state != JobStatus.CREATED){
+              throw( new InvalidTransaction("Previous state of job must be CREATED"))
+            }
+            else {
+              job.state = JobStatus.LOCKED
+              let entries = { [address] : cbor.encode(JSON.stringify(job))
+              }
+              return context.setState(entries)
+            }
+          } 
+          else {
+            throw(  new InvalidTransaction("Job with this ID doesn't exist"))
+          }
+        })
       }
       else if( action === 'submit'){
       }
